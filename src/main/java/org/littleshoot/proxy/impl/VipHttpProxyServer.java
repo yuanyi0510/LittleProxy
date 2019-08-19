@@ -2,13 +2,7 @@ package org.littleshoot.proxy.impl;
 
 import io.netty.bootstrap.ChannelFactory;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ServerChannel;
+import io.netty.channel.*;
 import io.netty.channel.group.ChannelGroup;
 import io.netty.channel.group.ChannelGroupFuture;
 import io.netty.channel.group.DefaultChannelGroup;
@@ -16,21 +10,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
 import io.netty.handler.traffic.GlobalTrafficShapingHandler;
 import io.netty.util.concurrent.GlobalEventExecutor;
-import org.littleshoot.proxy.ActivityTracker;
-import org.littleshoot.proxy.ChainedProxyManager;
-import org.littleshoot.proxy.DefaultHostResolver;
-import org.littleshoot.proxy.DnsSecServerResolver;
-import org.littleshoot.proxy.HostResolver;
-import org.littleshoot.proxy.HttpFilters;
-import org.littleshoot.proxy.HttpFiltersSource;
-import org.littleshoot.proxy.HttpFiltersSourceAdapter;
-import org.littleshoot.proxy.HttpProxyServer;
-import org.littleshoot.proxy.HttpProxyServerBootstrap;
-import org.littleshoot.proxy.MitmManager;
-import org.littleshoot.proxy.ProxyAuthenticator;
-import org.littleshoot.proxy.SslEngineSource;
-import org.littleshoot.proxy.TransportProtocol;
-import org.littleshoot.proxy.UnknownTransportProtocolException;
+import org.littleshoot.proxy.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,21 +32,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * </p>
  *
  * <p>
- * {@link DefaultHttpProxyServer} is bootstrapped by calling
+ * {@link org.littleshoot.proxy.impl.DefaultHttpProxyServer} is bootstrapped by calling
  * {@link #bootstrap()} or {@link #bootstrapFromFile(String)}, and then calling
  * {@link DefaultHttpProxyServerBootstrap#start()}. For example:
  * </p>
  *
  * <pre>
- * DefaultHttpProxyServer server =
- *         DefaultHttpProxyServer
+ * VipHttpProxyServer server =
+ *         VipHttpProxyServer
  *                 .bootstrap()
  *                 .withPort(8090)
  *                 .start();
  * </pre>
  */
-public class DefaultHttpProxyServer implements HttpProxyServer {
-    private static final Logger LOG = LoggerFactory.getLogger(DefaultHttpProxyServer.class);
+public class VipHttpProxyServer implements HttpProxyServer {
+    private static final Logger LOG = LoggerFactory.getLogger(org.littleshoot.proxy.impl.DefaultHttpProxyServer.class);
 
     /**
      * The interval in ms at which the GlobalTrafficShapingHandler will run to compute and throttle the
@@ -152,7 +132,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     }, "LittleProxy-JVM-shutdown-hook");
 
     /**
-     * Bootstrap a new {@link DefaultHttpProxyServer} starting from scratch.
+     * Bootstrap a new {@link org.littleshoot.proxy.impl.DefaultHttpProxyServer} starting from scratch.
      *
      * @return
      */
@@ -161,7 +141,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
     }
 
     /**
-     * Bootstrap a new {@link DefaultHttpProxyServer} using defaults from the
+     * Bootstrap a new {@link org.littleshoot.proxy.impl.DefaultHttpProxyServer} using defaults from the
      * given file.
      *
      * @param path
@@ -216,29 +196,29 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
      * @param maxChunkSize
      * @param allowRequestsToOriginServer when true, allow the proxy to handle requests that contain an origin-form URI, as defined in RFC 7230 5.3.1
      */
-    private DefaultHttpProxyServer(ServerGroup serverGroup,
-                                   TransportProtocol transportProtocol,
-                                   InetSocketAddress requestedAddress,
-                                   SslEngineSource sslEngineSource,
-                                   boolean authenticateSslClients,
-                                   ProxyAuthenticator proxyAuthenticator,
-                                   ChainedProxyManager chainProxyManager,
-                                   MitmManager mitmManager,
-                                   HttpFiltersSource filtersSource,
-                                   boolean transparent,
-                                   int idleConnectionTimeout,
-                                   Collection<ActivityTracker> activityTrackers,
-                                   int connectTimeout,
-                                   HostResolver serverResolver,
-                                   long readThrottleBytesPerSecond,
-                                   long writeThrottleBytesPerSecond,
-                                   InetSocketAddress localAddress,
-                                   String proxyAlias,
-                                   int maxInitialLineLength,
-                                   int maxHeaderSize,
-                                   int maxChunkSize,
-                                   boolean allowRequestsToOriginServer,
-                                   String prostr) {
+    private VipHttpProxyServer(ServerGroup serverGroup,
+                               TransportProtocol transportProtocol,
+                               InetSocketAddress requestedAddress,
+                               SslEngineSource sslEngineSource,
+                               boolean authenticateSslClients,
+                               ProxyAuthenticator proxyAuthenticator,
+                               ChainedProxyManager chainProxyManager,
+                               MitmManager mitmManager,
+                               HttpFiltersSource filtersSource,
+                               boolean transparent,
+                               int idleConnectionTimeout,
+                               Collection<ActivityTracker> activityTrackers,
+                               int connectTimeout,
+                               HostResolver serverResolver,
+                               long readThrottleBytesPerSecond,
+                               long writeThrottleBytesPerSecond,
+                               InetSocketAddress localAddress,
+                               String proxyAlias,
+                               int maxInitialLineLength,
+                               int maxHeaderSize,
+                               int maxChunkSize,
+                               boolean allowRequestsToOriginServer,
+                               String prostr) {
         this.serverGroup = serverGroup;
         this.prostr = prostr;
         this.transportProtocol = transportProtocol;
@@ -499,7 +479,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
         ChannelInitializer<Channel> initializer = new ChannelInitializer<Channel>() {
             protected void initChannel(Channel ch) throws Exception {
                 new ClientToProxyConnection(
-                        DefaultHttpProxyServer.this,
+                        VipHttpProxyServer.this,
                         sslEngineSource,
                         authenticateSslClients,
                         ch.pipeline(),
@@ -889,7 +869,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
             return this;
         }
 
-        private DefaultHttpProxyServer build() {
+        private VipHttpProxyServer build() {
             final ServerGroup serverGroup;
 
             if (this.serverGroup != null) {
@@ -898,7 +878,7 @@ public class DefaultHttpProxyServer implements HttpProxyServer {
                 serverGroup = new ServerGroup(name, clientToProxyAcceptorThreads, clientToProxyWorkerThreads, proxyToServerWorkerThreads);
             }
 
-            return new DefaultHttpProxyServer(serverGroup,
+            return new VipHttpProxyServer(serverGroup,
                     transportProtocol, determineListenAddress(),
                     sslEngineSource, authenticateSslClients,
                     proxyAuthenticator, chainProxyManager, mitmManager,

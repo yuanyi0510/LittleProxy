@@ -64,4 +64,6 @@ public interface HttpProxyServer {
      * @param writeThrottleBytesPerSecond
      */
     void setThrottle(long readThrottleBytesPerSecond, long writeThrottleBytesPerSecond);
+
+    ChainedProxy getFiltersSource();
 }

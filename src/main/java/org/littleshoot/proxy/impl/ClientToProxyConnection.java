@@ -132,6 +132,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      */
     private volatile boolean mitming = false;
 
+    private static String prostr;
+
     private AtomicBoolean authenticated = new AtomicBoolean();
 
     private final GlobalTrafficShapingHandler globalTrafficShapingHandler;
@@ -146,9 +148,10 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             SslEngineSource sslEngineSource,
             boolean authenticateClients,
             ChannelPipeline pipeline,
-            GlobalTrafficShapingHandler globalTrafficShapingHandler) {
+            GlobalTrafficShapingHandler globalTrafficShapingHandler,
+            String prostr) {
         super(AWAITING_INITIAL, proxyServer, false);
-
+        this.prostr = prostr;
         initChannelPipeline(pipeline);
 
         if (sslEngineSource != null) {
@@ -179,7 +182,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      **************************************************************************/
 
     @Override
-    protected ConnectionState readHTTPInitial(HttpRequest httpRequest) {
+    public ConnectionState readHTTPInitial(HttpRequest httpRequest) {
         LOG.debug("Received raw request: {}", httpRequest);
 
         // if we cannot parse the request, immediately return a 400 and close the connection, since we do not know what state
@@ -303,7 +306,8 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
                         serverHostAndPort,
                         currentFilters,
                         httpRequest,
-                        globalTrafficShapingHandler);
+                        globalTrafficShapingHandler,
+                        prostr);
                 if (currentServerConnection == null) {
                     LOG.debug("Unable to create server connection, probably no chained proxies available");
                     boolean keepAlive = writeBadGateway(httpRequest);
@@ -393,7 +397,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     }
 
     @Override
-    protected void readHTTPChunk(HttpContent chunk) {
+    public void readHTTPChunk(HttpContent chunk) {
         currentFilters.clientToProxyRequest(chunk);
         currentFilters.proxyToServerRequest(chunk);
 
@@ -401,7 +405,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     }
 
     @Override
-    protected void readRaw(ByteBuf buf) {
+    public void readRaw(ByteBuf buf) {
         currentServerConnection.write(buf);
     }
 
@@ -495,7 +499,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
             return true;
         }
 
-        protected Future<?> execute() {
+        public Future<?> execute() {
             LOG.debug("Responding with CONNECT successful");
             HttpResponse response = ProxyUtils.createFullHttpResponse(HttpVersion.HTTP_1_1,
                     CONNECTION_ESTABLISHED);
@@ -510,7 +514,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * {@link HttpRequest}.
      */
     @Override
-    protected void connected() {
+    public void connected() {
         super.connected();
         become(AWAITING_INITIAL);
         recordClientConnected();
@@ -526,7 +530,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     }
 
     @Override
-    protected void timedOut() {
+    public void timedOut() {
         // idle timeout fired on the client channel. if we aren't waiting on a response from a server, hang up
         if (currentServerConnection == null || this.lastReadTime <= currentServerConnection.lastReadTime) {
             super.timedOut();
@@ -537,7 +541,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * On disconnect of the client, disconnect all server connections.
      */
     @Override
-    protected void disconnected() {
+    public void disconnected() {
         super.disconnected();
         for (ProxyToServerConnection serverConnection : serverConnectionsByHostAndPort
                 .values()) {
@@ -551,7 +555,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * 
      * @param serverConnection
      */
-    protected void serverConnectionFlowStarted(
+    public void serverConnectionFlowStarted(
             ProxyToServerConnection serverConnection) {
         stopReading();
         this.numberOfCurrentlyConnectingServers.incrementAndGet();
@@ -564,7 +568,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * @param serverConnection
      * @param shouldForwardInitialRequest
      */
-    protected void serverConnectionSucceeded(
+    public void serverConnectionSucceeded(
             ProxyToServerConnection serverConnection,
             boolean shouldForwardInitialRequest) {
         LOG.debug("Connection to server succeeded: {}",
@@ -598,7 +602,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * @return true if we're falling back to a another chained proxy (or direct
      *         connection) and trying again
      */
-    protected boolean serverConnectionFailed(
+    public boolean serverConnectionFailed(
             ProxyToServerConnection serverConnection,
             ConnectionState lastStateBeforeFailure,
             Throwable cause) {
@@ -656,7 +660,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * 
      * @param serverConnection
      */
-    protected void serverDisconnected(ProxyToServerConnection serverConnection) {
+    public void serverDisconnected(ProxyToServerConnection serverConnection) {
         numberOfCurrentlyConnectedServers.decrementAndGet();
 
         // for non-SSL connections, do not disconnect the client from the proxy, even if this was the last server connection.
@@ -673,7 +677,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * associated ProxyToServerConnections.
      */
     @Override
-    synchronized protected void becameSaturated() {
+    synchronized public void becameSaturated() {
         super.becameSaturated();
         for (ProxyToServerConnection serverConnection : serverConnectionsByHostAndPort
                 .values()) {
@@ -690,7 +694,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * associated ProxyToServerConnections.
      */
     @Override
-    synchronized protected void becameWritable() {
+    synchronized public void becameWritable() {
         super.becameWritable();
         for (ProxyToServerConnection serverConnection : serverConnectionsByHostAndPort
                 .values()) {
@@ -707,7 +711,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * 
      * @param serverConnection
      */
-    synchronized protected void serverBecameSaturated(
+    synchronized public void serverBecameSaturated(
             ProxyToServerConnection serverConnection) {
         if (serverConnection.isSaturated()) {
             LOG.info("Connection to server became saturated, stopping reading");
@@ -721,7 +725,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      * 
      * @param serverConnection
      */
-    synchronized protected void serverBecameWriteable(
+    synchronized public void serverBecameWriteable(
             ProxyToServerConnection serverConnection) {
         boolean anyServersSaturated = false;
         for (ProxyToServerConnection otherServerConnection : serverConnectionsByHostAndPort
@@ -738,7 +742,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
     }
 
     @Override
-    protected void exceptionCaught(Throwable cause) {
+    public void exceptionCaught(Throwable cause) {
         try {
             if (cause instanceof IOException) {
                 // IOExceptions are expected errors, for example when a browser is killed and aborts a connection.
@@ -1344,7 +1348,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
         return mitming;
     }
 
-    protected void setMitming(boolean isMitming) {
+    public void setMitming(boolean isMitming) {
         this.mitming = isMitming;
     }
 
@@ -1356,7 +1360,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
      **************************************************************************/
     private final BytesReadMonitor bytesReadMonitor = new BytesReadMonitor() {
         @Override
-        protected void bytesRead(int numberOfBytes) {
+        public void bytesRead(int numberOfBytes) {
             FlowContext flowContext = flowContext();
             for (ActivityTracker tracker : proxyServer
                     .getActivityTrackers()) {
@@ -1367,7 +1371,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
     private RequestReadMonitor requestReadMonitor = new RequestReadMonitor() {
         @Override
-        protected void requestRead(HttpRequest httpRequest) {
+        public void requestRead(HttpRequest httpRequest) {
             FlowContext flowContext = flowContext();
             for (ActivityTracker tracker : proxyServer
                     .getActivityTrackers()) {
@@ -1378,7 +1382,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
     private BytesWrittenMonitor bytesWrittenMonitor = new BytesWrittenMonitor() {
         @Override
-        protected void bytesWritten(int numberOfBytes) {
+        public void bytesWritten(int numberOfBytes) {
             FlowContext flowContext = flowContext();
             for (ActivityTracker tracker : proxyServer
                     .getActivityTrackers()) {
@@ -1389,7 +1393,7 @@ public class ClientToProxyConnection extends ProxyConnection<HttpRequest> {
 
     private ResponseWrittenMonitor responseWrittenMonitor = new ResponseWrittenMonitor() {
         @Override
-        protected void responseWritten(HttpResponse httpResponse) {
+        public void responseWritten(HttpResponse httpResponse) {
             FlowContext flowContext = flowContext();
             for (ActivityTracker tracker : proxyServer
                     .getActivityTrackers()) {

@@ -3,7 +3,7 @@ package org.littleshoot.proxy;
 import static org.littleshoot.proxy.TransportProtocol.*;
 
 public class MitmWithUnencryptedUDTChainedProxyTest extends MitmWithChainedProxyTest {
-    @Override
+   /* @Override
     protected HttpProxyServerBootstrap upstreamProxy() {
         return super.upstreamProxy()
                 .withTransportProtocol(UDT);
@@ -22,5 +22,5 @@ public class MitmWithUnencryptedUDTChainedProxyTest extends MitmWithChainedProxy
                 return false;
             }
         };
-    }
+    }*/
 }

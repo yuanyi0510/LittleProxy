@@ -62,22 +62,22 @@ import static org.littleshoot.proxy.impl.ConnectionState.*;
  */
 abstract class ProxyConnection<I extends HttpObject> extends
         SimpleChannelInboundHandler<Object> {
-    protected final ProxyConnectionLogger LOG = new ProxyConnectionLogger(this);
+    public final ProxyConnectionLogger LOG = new ProxyConnectionLogger(this);
 
-    protected final DefaultHttpProxyServer proxyServer;
-    protected final boolean runsAsSslClient;
+    public final DefaultHttpProxyServer proxyServer;
+    public final boolean runsAsSslClient;
 
-    protected volatile ChannelHandlerContext ctx;
-    protected volatile Channel channel;
+    public volatile ChannelHandlerContext ctx;
+    public volatile Channel channel;
 
     private volatile ConnectionState currentState;
     private volatile boolean tunneling = false;
-    protected volatile long lastReadTime = 0;
+    public volatile long lastReadTime = 0;
 
     /**
      * If using encryption, this holds our {@link SSLEngine}.
      */
-    protected volatile SSLEngine sslEngine;
+    public volatile SSLEngine sslEngine;
 
     /**
      * Construct a new ProxyConnection.
@@ -90,13 +90,14 @@ abstract class ProxyConnection<I extends HttpObject> extends
      *            determines whether this connection acts as an SSL client or
      *            server (determines who does the handshake)
      */
-    protected ProxyConnection(ConnectionState initialState,
+    public ProxyConnection(ConnectionState initialState,
             DefaultHttpProxyServer proxyServer,
             boolean runsAsSslClient) {
         become(initialState);
         this.proxyServer = proxyServer;
         this.runsAsSslClient = runsAsSslClient;
     }
+
 
     /***************************************************************************
      * Reading
@@ -107,7 +108,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * 
      * @param msg
      */
-    protected void read(Object msg) {
+    public void read(Object msg) {
         LOG.debug("Reading: {}", msg);
 
         lastReadTime = System.currentTimeMillis();
@@ -188,14 +189,14 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * @param httpObject
      * @return
      */
-    protected abstract ConnectionState readHTTPInitial(I httpObject);
+    public abstract ConnectionState readHTTPInitial(I httpObject);
 
     /**
      * Implement this to handle reading a chunk in a chunked transfer.
      * 
      * @param chunk
      */
-    protected abstract void readHTTPChunk(HttpContent chunk);
+    public abstract void readHTTPChunk(HttpContent chunk);
 
     /**
      * Implement this to handle reading a raw buffer as they are used in HTTP
@@ -203,7 +204,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * 
      * @param buf
      */
-    protected abstract void readRaw(ByteBuf buf);
+    public abstract void readRaw(ByteBuf buf);
 
     /***************************************************************************
      * Writing
@@ -243,7 +244,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * 
      * @param httpObject
      */
-    protected void writeHttp(HttpObject httpObject) {
+    public void writeHttp(HttpObject httpObject) {
         if (ProxyUtils.isLastChunk(httpObject)) {
             channel.write(httpObject);
             LOG.debug("Writing an empty buffer to signal the end of our chunked transfer");
@@ -258,11 +259,11 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * 
      * @param buf
      */
-    protected void writeRaw(ByteBuf buf) {
+    public void writeRaw(ByteBuf buf) {
         writeToChannel(buf);
     }
 
-    protected ChannelFuture writeToChannel(final Object msg) {
+    public ChannelFuture writeToChannel(final Object msg) {
         return channel.writeAndFlush(msg);
     }
 
@@ -277,7 +278,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * {@link Channel} is connected doesn't mean that our connection is fully
      * established.
      */
-    protected void connected() {
+    public void connected() {
         LOG.debug("Connected");
     }
 
@@ -285,7 +286,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * This method is called as soon as the underlying {@link Channel} becomes
      * disconnected.
      */
-    protected void disconnected() {
+    public void disconnected() {
         become(DISCONNECTED);
         LOG.debug("Disconnected");
     }
@@ -294,7 +295,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * This method is called when the underlying {@link Channel} times out due
      * to an idle timeout.
      */
-    protected void timedOut() {
+    public void timedOut() {
         disconnect();
     }
 
@@ -310,14 +311,14 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * directly.
      * </p>
      */
-    protected ConnectionFlowStep StartTunneling = new ConnectionFlowStep(
+    public ConnectionFlowStep StartTunneling = new ConnectionFlowStep(
             this, NEGOTIATING_CONNECT) {
         @Override
         boolean shouldSuppressInitialRequest() {
             return true;
         }
 
-        protected Future execute() {
+        public Future execute() {
             try {
                 ChannelPipeline pipeline = ctx.pipeline();
                 if (pipeline.get("encoder") != null) {
@@ -349,7 +350,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      *            determines whether to authenticate clients or not
      * @return a Future for when the SSL handshake has completed
      */
-    protected Future<Channel> encrypt(SSLEngine sslEngine,
+    public Future<Channel> encrypt(SSLEngine sslEngine,
             boolean authenticateClients) {
         return encrypt(ctx.pipeline(), sslEngine, authenticateClients);
     }
@@ -365,7 +366,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      *            determines whether to authenticate clients or not
      * @return a Future for when the SSL handshake has completed
      */
-    protected Future<Channel> encrypt(ChannelPipeline pipeline,
+    public Future<Channel> encrypt(ChannelPipeline pipeline,
             SSLEngine sslEngine,
             boolean authenticateClients) {
         LOG.debug("Enabling encryption with SSLEngine: {}",
@@ -395,7 +396,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * @param sslEngine
      *            the {@link SSLEngine} for doing the encryption
      */
-    protected ConnectionFlowStep EncryptChannel(
+    public ConnectionFlowStep EncryptChannel(
             final SSLEngine sslEngine) {
 
         return new ConnectionFlowStep(this, HANDSHAKING) {
@@ -405,7 +406,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
             }
 
             @Override
-            protected Future<?> execute() {
+            public Future<?> execute() {
                 return encrypt(sslEngine, !runsAsSslClient);
             }
         };
@@ -418,7 +419,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * @param pipeline
      * @param numberOfBytesToBuffer
      */
-    protected void aggregateContentForFiltering(ChannelPipeline pipeline,
+    public void aggregateContentForFiltering(ChannelPipeline pipeline,
             int numberOfBytesToBuffer) {
         pipeline.addLast("inflater", new HttpContentDecompressor());
         pipeline.addLast("aggregator", new HttpObjectAggregator(
@@ -428,14 +429,14 @@ abstract class ProxyConnection<I extends HttpObject> extends
     /**
      * Callback that's invoked if this connection becomes saturated.
      */
-    protected void becameSaturated() {
+    public void becameSaturated() {
         LOG.debug("Became saturated");
     }
 
     /**
      * Callback that's invoked when this connection becomes writeable again.
      */
-    protected void becameWritable() {
+    public void becameWritable() {
         LOG.debug("Became writeable");
     }
 
@@ -445,7 +446,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * 
      * @param cause
      */
-    protected void exceptionCaught(Throwable cause) {
+    public void exceptionCaught(Throwable cause) {
     }
 
     /***************************************************************************
@@ -499,7 +500,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * 
      * @return
      */
-    protected boolean isSaturated() {
+    public boolean isSaturated() {
         return !this.channel.isWritable();
     }
 
@@ -509,7 +510,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * @param state
      * @return
      */
-    protected boolean is(ConnectionState state) {
+    public boolean is(ConnectionState state) {
         return currentState == state;
     }
 
@@ -519,7 +520,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * 
      * @return
      */
-    protected boolean isConnecting() {
+    public boolean isConnecting() {
         return currentState.isPartOfConnectionFlow();
     }
 
@@ -528,11 +529,11 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * 
      * @param state
      */
-    protected void become(ConnectionState state) {
+    public void become(ConnectionState state) {
         this.currentState = state;
     }
 
-    protected ConnectionState getCurrentState() {
+    public ConnectionState getCurrentState() {
         return currentState;
     }
 
@@ -547,7 +548,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     /**
      * Call this to stop reading.
      */
-    protected void stopReading() {
+    public void stopReading() {
         LOG.debug("Stopped reading");
         this.channel.config().setAutoRead(false);
     }
@@ -555,7 +556,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
     /**
      * Call this to resume reading.
      */
-    protected void resumeReading() {
+    public void resumeReading() {
         LOG.debug("Resumed reading");
         this.channel.config().setAutoRead(true);
     }
@@ -570,7 +571,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      *            Filter attached to the give HttpRequest (if any)
      * @return
      */
-    protected HttpFilters getHttpFiltersFromProxyServer(HttpRequest httpRequest) {
+    public HttpFilters getHttpFiltersFromProxyServer(HttpRequest httpRequest) {
         return proxyServer.getFiltersSource().filterRequest(httpRequest, ctx);
     }
 
@@ -582,7 +583,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * Adapting the Netty API
      **************************************************************************/
     @Override
-    protected final void channelRead0(ChannelHandlerContext ctx, Object msg)
+    public final void channelRead0(ChannelHandlerContext ctx, Object msg)
             throws Exception {
         read(msg);
     }
@@ -677,7 +678,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
      * Utility handler for monitoring bytes read on this connection.
      */
     @Sharable
-    protected abstract class BytesReadMonitor extends
+    public abstract class BytesReadMonitor extends
             ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg)
@@ -693,14 +694,14 @@ abstract class ProxyConnection<I extends HttpObject> extends
             }
         }
 
-        protected abstract void bytesRead(int numberOfBytes);
+        public abstract void bytesRead(int numberOfBytes);
     }
 
     /**
      * Utility handler for monitoring requests read on this connection.
      */
     @Sharable
-    protected abstract class RequestReadMonitor extends
+    public abstract class RequestReadMonitor extends
             ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg)
@@ -716,14 +717,14 @@ abstract class ProxyConnection<I extends HttpObject> extends
             }
         }
 
-        protected abstract void requestRead(HttpRequest httpRequest);
+        public abstract void requestRead(HttpRequest httpRequest);
     }
 
     /**
      * Utility handler for monitoring responses read on this connection.
      */
     @Sharable
-    protected abstract class ResponseReadMonitor extends
+    public abstract class ResponseReadMonitor extends
             ChannelInboundHandlerAdapter {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg)
@@ -739,14 +740,14 @@ abstract class ProxyConnection<I extends HttpObject> extends
             }
         }
 
-        protected abstract void responseRead(HttpResponse httpResponse);
+        public abstract void responseRead(HttpResponse httpResponse);
     }
 
     /**
      * Utility handler for monitoring bytes written on this connection.
      */
     @Sharable
-    protected abstract class BytesWrittenMonitor extends
+    public abstract class BytesWrittenMonitor extends
             ChannelOutboundHandlerAdapter {
         @Override
         public void write(ChannelHandlerContext ctx,
@@ -763,14 +764,14 @@ abstract class ProxyConnection<I extends HttpObject> extends
             }
         }
 
-        protected abstract void bytesWritten(int numberOfBytes);
+        public abstract void bytesWritten(int numberOfBytes);
     }
 
     /**
      * Utility handler for monitoring requests written on this connection.
      */
     @Sharable
-    protected abstract class RequestWrittenMonitor extends
+    public abstract class RequestWrittenMonitor extends
             ChannelOutboundHandlerAdapter {
         @Override
         public void write(ChannelHandlerContext ctx,
@@ -799,24 +800,24 @@ abstract class ProxyConnection<I extends HttpObject> extends
         /**
          * Invoked immediately before an HttpRequest is written.
          */
-        protected abstract void requestWriting(HttpRequest httpRequest);
+        public abstract void requestWriting(HttpRequest httpRequest);
 
         /**
          * Invoked immediately after an HttpRequest has been sent.
          */
-        protected abstract void requestWritten(HttpRequest httpRequest);
+        public abstract void requestWritten(HttpRequest httpRequest);
 
         /**
          * Invoked immediately after an HttpContent has been sent.
          */
-        protected abstract void contentWritten(HttpContent httpContent);
+        public abstract void contentWritten(HttpContent httpContent);
     }
 
     /**
      * Utility handler for monitoring responses written on this connection.
      */
     @Sharable
-    protected abstract class ResponseWrittenMonitor extends
+    public abstract class ResponseWrittenMonitor extends
             ChannelOutboundHandlerAdapter {
         @Override
         public void write(ChannelHandlerContext ctx,
@@ -833,7 +834,7 @@ abstract class ProxyConnection<I extends HttpObject> extends
             }
         }
 
-        protected abstract void responseWritten(HttpResponse httpResponse);
+        public abstract void responseWritten(HttpResponse httpResponse);
     }
 
 }

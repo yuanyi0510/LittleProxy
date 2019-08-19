@@ -1,5 +1,9 @@
 package org.littleshoot.proxy;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpObject;
+import io.netty.handler.codec.http.HttpRequest;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -17,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 
 /**
@@ -72,7 +77,7 @@ public class Launcher {
             printHelp(options, null);
             return;
         }
-        final int defaultPort = 8080;
+        final int defaultPort = 8411;
         int port;
         if (cmd.hasOption(OPTION_PORT)) {
             final String val = cmd.getOptionValue(OPTION_PORT);
@@ -88,10 +93,50 @@ public class Launcher {
 
 
         System.out.println("About to start server on port: " + port);
-        HttpProxyServerBootstrap bootstrap = DefaultHttpProxyServer
-                .bootstrapFromFile("./littleproxy.properties")
+        HttpProxyServerBootstrap bootstrap = DefaultHttpProxyServer.bootstrap()
                 .withPort(port)
-                .withAllowLocalOnly(false);
+                .withAllowLocalOnly(false)
+                .withFiltersSource(new HttpFiltersSourceAdapter() {
+                    //经过代理的request和response
+                    public HttpFilters filterRequest(HttpRequest originalRequest, ChannelHandlerContext ctx) {
+                        return new HttpFiltersAdapter(originalRequest) {
+                            @Override
+                            public io.netty.handler.codec.http.HttpResponse proxyToServerRequest(HttpObject httpObject) {
+                                // TODO: implement your filtering here
+                                return null;
+                            }
+
+                            @Override
+                            public io.netty.handler.codec.http.HttpResponse clientToProxyRequest(HttpObject httpObject) {
+                                // TODO: implement your filtering here
+                                String uri = originalRequest.getUri();
+                                System.out.println("clientToProxyRequest : " + uri);
+                                return null;
+                            }
+
+                            @Override
+                            public HttpObject proxyToClientResponse(HttpObject httpObject) {
+                                //Simple response filtering...
+                                if (httpObject instanceof io.netty.handler.codec.http.HttpResponse) {
+                                    System.out.println(((io.netty.handler.codec.http.HttpResponse) httpObject)
+                                            .toString());
+                                } else if (httpObject instanceof HttpContent) {
+                                    System.out.println(((HttpContent) httpObject)
+                                            .content().toString(
+                                                    Charset.forName("UTF-8")));
+                                }
+                                System.out.println("proxyToClientResponse   Received a response..");
+                                return httpObject;
+                            }
+
+                            @Override
+                            public HttpObject serverToProxyResponse(HttpObject httpObject) {
+                                //Simple response filtering...
+                                return httpObject;
+                            }
+                        };
+                    }});
+
 
         if (cmd.hasOption(OPTION_NIC)) {
             final String val = cmd.getOptionValue(OPTION_NIC);

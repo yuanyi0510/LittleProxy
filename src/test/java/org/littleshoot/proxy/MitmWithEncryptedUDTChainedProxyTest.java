@@ -7,7 +7,7 @@ import javax.net.ssl.SSLEngine;
 import org.littleshoot.proxy.extras.SelfSignedSslEngineSource;
 
 public class MitmWithEncryptedUDTChainedProxyTest extends MitmWithChainedProxyTest {
-    private final SslEngineSource sslEngineSource = new SelfSignedSslEngineSource(
+   /* private final SslEngineSource sslEngineSource = new SelfSignedSslEngineSource(
             "chain_proxy_keystore_1.jks");
 
     @Override
@@ -35,5 +35,5 @@ public class MitmWithEncryptedUDTChainedProxyTest extends MitmWithChainedProxyTe
                 return sslEngineSource.newSslEngine();
             }
         };
-    }
+    }*/
 }

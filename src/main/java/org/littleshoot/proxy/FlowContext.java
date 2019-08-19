@@ -6,6 +6,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSession;
 
 import org.littleshoot.proxy.impl.ClientToProxyConnection;
+//import org.littleshoot.proxy.impl.VipClientToProxyConnection;
 
 /**
  * <p>
@@ -24,6 +25,14 @@ public class FlowContext {
         this.clientSslSession = sslEngine != null ? sslEngine.getSession()
                 : null;
     }
+
+//    public FlowContext(VipClientToProxyConnection clientConnection) {
+//        super();
+//        this.clientAddress = clientConnection.getClientAddress();
+//        SSLEngine sslEngine = clientConnection.getSslEngine();
+//        this.clientSslSession = sslEngine != null ? sslEngine.getSession()
+//                : null;
+//    }
 
     /**
      * The address of the client.

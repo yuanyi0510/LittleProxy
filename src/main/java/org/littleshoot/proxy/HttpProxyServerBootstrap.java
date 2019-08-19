@@ -26,6 +26,8 @@ public interface HttpProxyServerBootstrap {
      */
     HttpProxyServerBootstrap withName(String name);
 
+    HttpProxyServerBootstrap withProStr(String proStr);
+
     /**
      * <p>
      * Specify the {@link TransportProtocol} to use for incoming connections.
